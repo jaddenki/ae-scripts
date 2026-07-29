@@ -11,11 +11,13 @@
 // Type the "from" hex and "to" hex in the dialog, hit Run.
 
 (function () {
+  try {
 
     var TOLERANCE = 0.03; // how close a color needs to be to count as a match (0-1 scale per channel)
 
     function hexToAE(hex) {
-        hex = hex.replace(/^#/, '').trim();
+        // ExtendScript's JS engine is ES3-based and has no String.trim(), so strip whitespace via regex instead
+        hex = hex.replace(/^\s+|\s+$/g, '').replace(/^#/, '');
         if (hex.length === 3) {
             hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
         }
@@ -26,12 +28,12 @@
     }
 
     function aeToHex(c) {
-        function byte(v) {
+        function toByteHex(v) {
             var n = Math.max(0, Math.min(255, Math.round(v * 255)));
             var h = n.toString(16).toUpperCase();
             return h.length === 1 ? "0" + h : h;
         }
-        return "#" + byte(c[0]) + byte(c[1]) + byte(c[2]);
+        return "#" + toByteHex(c[0]) + toByteHex(c[1]) + toByteHex(c[2]);
     }
 
     function colorsMatch(c1, c2, tolerance) {
@@ -240,11 +242,23 @@
 
     cancelBtn.onClick = function () { win.close(); };
     runBtn.onClick = function () {
-        run(fromField.text, toField.text);
+        try {
+            run(fromField.text, toField.text);
+        } catch (runErr) {
+            alert("ColorSwap ran into an error:\n" + runErr.toString() +
+                  (runErr.line ? ("\nLine: " + runErr.line) : ""));
+        }
         win.close();
     };
+
+    win.onShow = function () { win.active = true; };
 
     win.center();
     win.show();
 
+  } catch (err) {
+    // Guarantees you always get SOME feedback instead of the script silently doing nothing
+    alert("ColorSwap failed to start:\n" + err.toString() +
+          (err.line ? ("\nLine: " + err.line) : ""));
+  }
 })();
